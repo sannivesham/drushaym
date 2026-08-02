@@ -288,7 +288,8 @@ async function openVideoEditor(id) {
     const categoryName = catSelect.options[catSelect.selectedIndex]?.text.trim() || "";
     const cleanId = extractYoutubeId(box.querySelector(".e-yt").value.trim());
     let editThumb = box.querySelector(".e-thumb").value.trim();
-    if (!editThumb && cleanId) {
+    const thumbLooksBroken = !editThumb || editThumb.includes("?") || editThumb.includes("si=");
+    if (thumbLooksBroken && cleanId) {
       editThumb = `https://img.youtube.com/vi/${cleanId}/hqdefault.jpg`;
     }
     const saveBtn = box.querySelector(".e-save");
