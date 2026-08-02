@@ -260,17 +260,23 @@
 
     let currentUser = null;
 
-    onAuthStateChanged(auth, async (user) => {
-      currentUser = user;
-      if (user) {
-        try {
-          const snap = await getDoc(doc(db, "subscribers", user.uid));
-          if (snap.exists() && snap.data().active) {
-            document.getElementById("alreadySubBox").style.display = "block";
-          }
-        } catch(e) {}
+function isActiveSubscription(data) {
+  if (!data || !data.active) return false;
+  if (!data.expiresAt) return true;
+  return new Date(data.expiresAt).getTime() > Date.now();
+}
+
+onAuthStateChanged(auth, async (user) => {
+  currentUser = user;
+  if (user) {
+    try {
+      const snap = await getDoc(doc(db, "subscribers", user.uid));
+      if (isActiveSubscription(snap.exists() ? snap.data() : null)) {
+        document.getElementById("alreadySubBox").style.display = "block";
       }
-    });
+    } catch(e) {}
+  }
+});
 
     window.handleSubscribe = async function(plan, amount) {
       // If not logged in, sign in first
