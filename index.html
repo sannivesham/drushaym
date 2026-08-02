@@ -367,8 +367,14 @@
     } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
 
     let currentUser = null;
-    let isSubscribed = false;
-    let allVideos = [];
+let isSubscribed = false;
+let allVideos = [];
+
+function isActiveSubscription(data) {
+  if (!data || !data.active) return false;
+  if (!data.expiresAt) return true;
+  return new Date(data.expiresAt).getTime() > Date.now();
+}
 
     // Navbar scroll
     window.addEventListener("scroll", () => {
@@ -384,10 +390,10 @@
         const initial = (user.displayName || "U")[0].toUpperCase();
         document.getElementById("navProfileBtn").innerText = initial;
         // Check subscription
-        try {
-          const snap = await getDoc(doc(db, "subscribers", user.uid));
-          isSubscribed = snap.exists() && snap.data().active;
-        } catch(e) {}
+try {
+  const snap = await getDoc(doc(db, "subscribers", user.uid));
+  isSubscribed = isActiveSubscription(snap.exists() ? snap.data() : null);
+} catch(e) {}
         document.getElementById("subBanner").style.display = isSubscribed ? "none" : "flex";
       } else {
         document.getElementById("navLoggedOut").style.display = "block";
