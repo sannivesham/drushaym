@@ -525,7 +525,7 @@
       input = input.trim();
       if (/^[a-zA-Z0-9_-]{11}$/.test(input)) return input;
       const patterns = [
-        /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/
+        /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/|youtube\.com\/live\/)([a-zA-Z0-9_-]{11})/
       ];
       for (const p of patterns) {
         const m = input.match(p);
@@ -536,6 +536,9 @@
         const v2 = url.searchParams.get("v");
         if (v2) return v2;
       } catch (e) {}
+      // Fallback: bare ID with a tracking param stuck on, e.g. "H381ZZstCd4?si=xxxx"
+      const bare = input.split(/[?&#\s]/)[0];
+      if (/^[a-zA-Z0-9_-]{11}$/.test(bare)) return bare;
       return input;
     }
 
