@@ -39,7 +39,7 @@ function extractYoutubeId(input) {
   input = input.trim();
   if (/^[a-zA-Z0-9_-]{11}$/.test(input)) return input;
   const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/|youtube\.com\/live\/)([a-zA-Z0-9_-]{11})/
   ];
   for (const p of patterns) {
     const m = input.match(p);
@@ -50,6 +50,10 @@ function extractYoutubeId(input) {
     const v = url.searchParams.get("v");
     if (v) return v;
   } catch (e) {}
+  // Fallback: bare ID with a tracking param stuck on, e.g. "H381ZZstCd4?si=xxxx"
+  // (happens when the domain/prefix isn't included in what was pasted)
+  const bare = input.split(/[?&#\s]/)[0];
+  if (/^[a-zA-Z0-9_-]{11}$/.test(bare)) return bare;
   return input;
 }
 
@@ -283,6 +287,10 @@ async function openVideoEditor(id) {
     const catSelect = box.querySelector(".e-cat");
     const categoryName = catSelect.options[catSelect.selectedIndex]?.text.trim() || "";
     const cleanId = extractYoutubeId(box.querySelector(".e-yt").value.trim());
+    let editThumb = box.querySelector(".e-thumb").value.trim();
+    if (!editThumb && cleanId) {
+      editThumb = `https://img.youtube.com/vi/${cleanId}/hqdefault.jpg`;
+    }
     const saveBtn = box.querySelector(".e-save");
     const msgEl = box.querySelector(".e-msg");
 
@@ -294,7 +302,7 @@ async function openVideoEditor(id) {
         title: box.querySelector(".e-title").value.trim(),
         description: box.querySelector(".e-desc").value.trim(),
         youtubeId: cleanId,
-        thumbnail: box.querySelector(".e-thumb").value.trim(),
+        thumbnail: editThumb,
         categoryId: catSelect.value,
         category: categoryName,
         access: box.querySelector(".e-access").value,
