@@ -29,6 +29,30 @@ navButtons.forEach(btn => {
   });
 });
 
+function showMsg(el, text, type) {
+  el.innerText = text;
+  el.className = `msg ${type}`;
+}
+
+function extractYoutubeId(input) {
+  if (!input) return "";
+  input = input.trim();
+  if (/^[a-zA-Z0-9_-]{11}$/.test(input)) return input;
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/
+  ];
+  for (const p of patterns) {
+    const m = input.match(p);
+    if (m) return m[1];
+  }
+  try {
+    const url = new URL(input);
+    const v = url.searchParams.get("v");
+    if (v) return v;
+  } catch (e) {}
+  return input;
+}
+
 /* ══════════════ CATEGORIES ══════════════ */
 
 const saveCatBtn = document.getElementById("saveCatBtn");
@@ -36,22 +60,33 @@ saveCatBtn.addEventListener("click", async () => {
   const name = document.getElementById("catName").value.trim();
   const emoji = document.getElementById("catEmoji").value.trim();
   const order = Number(document.getElementById("catOrder").value) || Date.now();
+  const msgEl = document.getElementById("catMsg");
 
   if (!name) {
-    document.getElementById("catMsg").innerText = "Category పేరు అవసరం";
+    showMsg(msgEl, "Category పేరు అవసరం", "error");
     return;
   }
 
-  await addDoc(collection(db, "streamCategories"), {
-    name, emoji, order, createdAt: serverTimestamp()
-  });
+  saveCatBtn.disabled = true;
+  saveCatBtn.innerHTML = `<span class="spinner-inline"></span>Saving...`;
 
-  document.getElementById("catName").value = "";
-  document.getElementById("catEmoji").value = "";
-  document.getElementById("catOrder").value = "";
-  document.getElementById("catMsg").innerText = "✅ Category saved";
+  try {
+    await addDoc(collection(db, "streamCategories"), {
+      name, emoji, order, createdAt: serverTimestamp()
+    });
 
-  loadCategories();
+    document.getElementById("catName").value = "";
+    document.getElementById("catEmoji").value = "";
+    document.getElementById("catOrder").value = "";
+    showMsg(msgEl, "✅ Category saved", "success");
+
+    loadCategories();
+  } catch (e) {
+    showMsg(msgEl, "❌ Error saving category", "error");
+  } finally {
+    saveCatBtn.disabled = false;
+    saveCatBtn.innerText = "Save Category";
+  }
 });
 
 async function loadCategories() {
@@ -64,13 +99,19 @@ async function loadCategories() {
   listEl.innerHTML = "";
   vidSelect.innerHTML = `<option value="">Select Category</option>`;
 
+  if (snap.empty) {
+    listEl.innerHTML = `<p style="color:var(--text3);font-size:0.85rem;">ఇంకా categories లేవు</p>`;
+    return;
+  }
+
+  let i = 0;
   snap.forEach(d => {
     const c = d.data();
 
     vidSelect.innerHTML += `<option value="${d.id}">${c.emoji || ""} ${c.name}</option>`;
 
     listEl.innerHTML += `
-      <div class="item-row">
+      <div class="item-row" style="animation-delay:${i * 0.03}s">
         <div class="item-info">
           <div class="item-title">${c.emoji || ""} ${c.name}</div>
           <div class="item-sub">Order: ${c.order}</div>
@@ -80,6 +121,7 @@ async function loadCategories() {
         </div>
       </div>
     `;
+    i++;
   });
 
   listEl.querySelectorAll('[data-action="delete-cat"]').forEach(btn => {
@@ -97,7 +139,7 @@ const saveVidBtn = document.getElementById("saveVidBtn");
 saveVidBtn.addEventListener("click", async () => {
   const title = document.getElementById("vidTitle").value.trim();
   const description = document.getElementById("vidDesc").value.trim();
-  const youtubeId = document.getElementById("vidYoutubeId").value.trim();
+  const youtubeId = extractYoutubeId(document.getElementById("vidYoutubeId").value.trim());
   let thumbnail = document.getElementById("vidThumb").value.trim();
   const categorySelect = document.getElementById("vidCategorySelect");
   const categoryId = categorySelect.value;
@@ -105,9 +147,10 @@ saveVidBtn.addEventListener("click", async () => {
   const access = document.getElementById("vidAccess").value;
   const duration = document.getElementById("vidDuration").value.trim();
   const year = document.getElementById("vidYear").value.trim();
+  const msgEl = document.getElementById("vidMsg");
 
   if (!title || !youtubeId || !categoryId) {
-    document.getElementById("vidMsg").innerText = "Title, YouTube ID మరియు Category అవసరం";
+    showMsg(msgEl, "Title, YouTube ID మరియు Category అవసరం", "error");
     return;
   }
 
@@ -115,21 +158,31 @@ saveVidBtn.addEventListener("click", async () => {
     thumbnail = `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`;
   }
 
-  await addDoc(collection(db, "streamVideos"), {
-    title, description, youtubeId, thumbnail,
-    categoryId, category: categoryName, access,
-    duration, year, createdAt: serverTimestamp()
-  });
+  saveVidBtn.disabled = true;
+  saveVidBtn.innerHTML = `<span class="spinner-inline"></span>Saving...`;
 
-  document.getElementById("vidTitle").value = "";
-  document.getElementById("vidDesc").value = "";
-  document.getElementById("vidYoutubeId").value = "";
-  document.getElementById("vidThumb").value = "";
-  document.getElementById("vidDuration").value = "";
-  document.getElementById("vidYear").value = "";
-  document.getElementById("vidMsg").innerText = "✅ Video saved";
+  try {
+    await addDoc(collection(db, "streamVideos"), {
+      title, description, youtubeId, thumbnail,
+      categoryId, category: categoryName, access,
+      duration, year, createdAt: serverTimestamp()
+    });
 
-  loadVideos();
+    document.getElementById("vidTitle").value = "";
+    document.getElementById("vidDesc").value = "";
+    document.getElementById("vidYoutubeId").value = "";
+    document.getElementById("vidThumb").value = "";
+    document.getElementById("vidDuration").value = "";
+    document.getElementById("vidYear").value = "";
+    showMsg(msgEl, "✅ Video saved", "success");
+
+    loadVideos();
+  } catch (e) {
+    showMsg(msgEl, "❌ Error saving video", "error");
+  } finally {
+    saveVidBtn.disabled = false;
+    saveVidBtn.innerText = "Save Video";
+  }
 });
 
 async function loadVideos() {
@@ -142,6 +195,12 @@ async function loadVideos() {
   listEl.innerHTML = "";
   heroSelect.innerHTML = `<option value="">Select Video</option>`;
 
+  if (snap.empty) {
+    listEl.innerHTML = `<p style="color:var(--text3);font-size:0.85rem;">ఇంకా వీడియోలు లేవు</p>`;
+    return;
+  }
+
+  let i = 0;
   snap.forEach(d => {
     const v = d.data();
     const badge = v.access === "free"
@@ -151,8 +210,8 @@ async function loadVideos() {
     heroSelect.innerHTML += `<option value="${d.id}">${v.title}</option>`;
 
     listEl.innerHTML += `
-      <div class="item-row">
-        <img class="item-thumb" src="${v.thumbnail || ""}" alt="">
+      <div class="item-row" style="animation-delay:${i * 0.03}s">
+        <img class="item-thumb" src="${v.thumbnail || ""}" alt="" loading="lazy">
         <div class="item-info">
           <div class="item-title">${v.title} ${badge}</div>
           <div class="item-sub">${v.category || "No category"} • ${v.duration || ""} • ${v.year || ""}</div>
@@ -164,6 +223,7 @@ async function loadVideos() {
       </div>
       <div class="vid-edit-box" id="vidEdit-${d.id}" style="display:none;"></div>
     `;
+    i++;
   });
 
   listEl.querySelectorAll('[data-action="delete-vid"]').forEach(btn => {
@@ -196,11 +256,11 @@ async function openVideoEditor(id) {
 
   box.style.display = "block";
   box.innerHTML = `
-    <div class="panel" style="margin-top:10px;">
+    <div class="panel fade-in" style="margin-top:10px;">
       <input type="text" class="e-title" value="${v.title || ""}" placeholder="Title">
       <textarea class="e-desc" placeholder="Description">${v.description || ""}</textarea>
       <div class="row2">
-        <input type="text" class="e-yt" value="${v.youtubeId || ""}" placeholder="YouTube ID">
+        <input type="text" class="e-yt" value="${v.youtubeId || ""}" placeholder="YouTube URL లేదా ID">
         <input type="text" class="e-thumb" value="${v.thumbnail || ""}" placeholder="Thumbnail URL">
       </div>
       <div class="row2">
@@ -215,28 +275,42 @@ async function openVideoEditor(id) {
         <input type="text" class="e-year" value="${v.year || ""}" placeholder="Year">
       </div>
       <button class="btn-primary e-save">Save Changes</button>
+      <p class="msg e-msg"></p>
     </div>
   `;
 
   box.querySelector(".e-save").addEventListener("click", async () => {
     const catSelect = box.querySelector(".e-cat");
     const categoryName = catSelect.options[catSelect.selectedIndex]?.text.trim() || "";
+    const cleanId = extractYoutubeId(box.querySelector(".e-yt").value.trim());
+    const saveBtn = box.querySelector(".e-save");
+    const msgEl = box.querySelector(".e-msg");
 
-    await updateDoc(doc(db, "streamVideos", id), {
-      title: box.querySelector(".e-title").value.trim(),
-      description: box.querySelector(".e-desc").value.trim(),
-      youtubeId: box.querySelector(".e-yt").value.trim(),
-      thumbnail: box.querySelector(".e-thumb").value.trim(),
-      categoryId: catSelect.value,
-      category: categoryName,
-      access: box.querySelector(".e-access").value,
-      duration: box.querySelector(".e-dur").value.trim(),
-      year: box.querySelector(".e-year").value.trim(),
-      updatedAt: serverTimestamp()
-    });
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = `<span class="spinner-inline"></span>Saving...`;
 
-    alert("✅ Video updated");
-    loadVideos();
+    try {
+      await updateDoc(doc(db, "streamVideos", id), {
+        title: box.querySelector(".e-title").value.trim(),
+        description: box.querySelector(".e-desc").value.trim(),
+        youtubeId: cleanId,
+        thumbnail: box.querySelector(".e-thumb").value.trim(),
+        categoryId: catSelect.value,
+        category: categoryName,
+        access: box.querySelector(".e-access").value,
+        duration: box.querySelector(".e-dur").value.trim(),
+        year: box.querySelector(".e-year").value.trim(),
+        updatedAt: serverTimestamp()
+      });
+
+      showMsg(msgEl, "✅ Video updated", "success");
+      loadVideos();
+    } catch (e) {
+      showMsg(msgEl, "❌ Error updating video", "error");
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.innerText = "Save Changes";
+    }
   });
 }
 
@@ -244,8 +318,10 @@ async function openVideoEditor(id) {
 
 document.getElementById("saveHeroBtn").addEventListener("click", async () => {
   const videoId = document.getElementById("heroVideoSelect").value;
+  const msgEl = document.getElementById("heroMsg");
+
   if (!videoId) {
-    document.getElementById("heroMsg").innerText = "వీడియో ఎంచుకోండి";
+    showMsg(msgEl, "వీడియో ఎంచుకోండి", "error");
     return;
   }
 
@@ -253,7 +329,7 @@ document.getElementById("saveHeroBtn").addEventListener("click", async () => {
     videoId, updatedAt: serverTimestamp()
   });
 
-  document.getElementById("heroMsg").innerText = "✅ Featured video saved";
+  showMsg(msgEl, "✅ Featured video saved", "success");
 });
 
 async function loadHeroCurrent() {
@@ -286,7 +362,7 @@ async function loadSubscribers() {
     return;
   }
 
-  subs.forEach(s => {
+  subs.forEach((s, i) => {
     const active = isActiveSubscription(s);
     const badge = active
       ? `<span class="badge badge-active">Active</span>`
@@ -296,7 +372,7 @@ async function loadSubscribers() {
       : "—";
 
     tbody.innerHTML += `
-      <tr>
+      <tr style="animation-delay:${i * 0.03}s">
         <td>${s.name || "—"}</td>
         <td>${s.email || "—"}</td>
         <td>${s.plan || "—"}</td>
@@ -322,6 +398,10 @@ async function loadSubscribers() {
 }
 
 document.getElementById("cleanupExpiredBtn").addEventListener("click", async () => {
+  const btn = document.getElementById("cleanupExpiredBtn");
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner-inline"></span>Checking...`;
+
   const snap = await getDocs(collection(db, "subscribers"));
   let count = 0;
 
@@ -332,6 +412,9 @@ document.getElementById("cleanupExpiredBtn").addEventListener("click", async () 
       count++;
     }
   }
+
+  btn.disabled = false;
+  btn.innerText = "గడువు ముగిసిన వారిని Deactivate చేయండి";
 
   alert(`✅ ${count} గడువు ముగిసిన subscribers deactivate చేయబడ్డారు`);
   loadSubscribers();
