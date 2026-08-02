@@ -45,10 +45,11 @@
 
     #ytIframe{
       position:absolute;
-      top:-9999px;left:-9999px;
-      width:1px;height:1px;
+      inset:0;
+      width:100%;height:100%;
       pointer-events:none;
       opacity:0;
+      z-index:1;
     }
 
     .player-stage{
@@ -248,16 +249,15 @@
     <div style="width:80px;"></div>
   </div>
 
-  <!-- HIDDEN YOUTUBE IFRAME -->
-  <iframe
-    id="ytIframe"
-    allow="autoplay; encrypted-media"
-    allowfullscreen
-  ></iframe>
-
   <!-- PLAYER STAGE -->
   <div class="player-wrap">
     <div class="player-stage" id="playerStage">
+
+      <iframe
+        id="ytIframe"
+        allow="autoplay; encrypted-media"
+        allowfullscreen
+      ></iframe>
 
       <img class="player-thumb" id="playerThumb" src="" alt="">
 
@@ -357,13 +357,7 @@
             window.player = player;
             window.playerReady = true;
             e.target.setVolume(80);
-            const iframe = document.getElementById('ytIframe');
-            iframe.style.position = 'absolute';
-            iframe.style.top = '0'; iframe.style.left = '0';
-            iframe.style.width = '100%'; iframe.style.height = '100%';
-            iframe.style.opacity = '1'; iframe.style.pointerEvents = 'none';
-            iframe.style.zIndex = '1';
-            document.getElementById('playerStage').appendChild(iframe);
+            document.getElementById('ytIframe').style.opacity = '1';
           },
           onStateChange: function(e) {
             const spinner = document.getElementById('videoSpinner');
