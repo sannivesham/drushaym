@@ -469,17 +469,23 @@
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
 
     const params = new URLSearchParams(window.location.search);
-    const videoId = params.get("id");
-    let isSubscribed = false;
+const videoId = params.get("id");
+let isSubscribed = false;
+
+function isActiveSubscription(data) {
+  if (!data || !data.active) return false;
+  if (!data.expiresAt) return true;
+  return new Date(data.expiresAt).getTime() > Date.now();
+}
 
     onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        try {
-          const snap = await getDoc(doc(db, "subscribers", user.uid));
-          isSubscribed = snap.exists() && snap.data().active;
-        } catch(e) {}
-      }
-      loadVideo();
+     if (user) {
+  try {
+    const snap = await getDoc(doc(db, "subscribers", user.uid));
+    isSubscribed = isActiveSubscription(snap.exists() ? snap.data() : null);
+  } catch(e) {}
+}
+loadVideo();
     });
 
     async function loadVideo() {
